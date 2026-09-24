@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>Smart Feeder</title>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f4f7;
+      color: #222;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 500px;
+      margin: 30px auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .connection {
+      text-align: center;
+      margin-bottom: 25px;
+      font-weight: bold;
+    }
+
+    .status-online {
+      color: green;
+    }
+
+    .status-offline {
+      color: red;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      margin-bottom: 18px;
+      border-radius: 15px;
+      text-align: center;
+
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.10);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    .status {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 15px 0 20px;
+    }
+
+    /* =========================
+       BUTTON
+       ========================= */
+
+    button {
+      width: 100%;
+      padding: 15px;
+
+      border: none;
+      border-radius: 10px;
+
+      font-size: 18px;
+      font-weight: bold;
+
+      cursor: pointer;
+
+      /* Supaya tombol tidak melakukan seleksi teks */
+      user-select: none;
+
+      /* Supaya HP tidak melakukan zoom/gesture */
+      touch-action: none;
+    }
+
+    .btn-on {
+      background: #22c55e;
+      color: white;
+    }
+
+    .btn-on:hover {
+      background: #16a34a;
+    }
+
+    .btn-all {
+      background: #2563eb;
+      color: white;
+    }
+
+    .btn-all:hover {
+      background: #1d4ed8;
+    }
+
+    /* Saat tombol sedang ditekan */
+
+    button.ditekan {
+      transform: scale(0.97);
+      opacity: 0.8;
+    }
+
+    .system {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+
+      box-shadow:
+        0 4px 12px rgba(0,0,0,0.10);
+    }
+
+    .system h2 {
+      margin-top: 0;
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <!-- =========================
+       JUDUL
+       ========================= -->
+
+  <h1>SMART FEEDER</h1>
+
+  <div class="connection">
+
+    Status HiveMQ:
+
+    <span
+      id="connectionStatus"
+      class="status-offline">
+
+      TERPUTUS
+
+    </span>
+
+  </div>
+
+
+  <!-- =========================
+       PAKAN 1
+       ========================= -->
+
+  <div class="card">
+
+    <h2>PAKAN 1</h2>
+
+    <div
+      class="status"
+      id="statusPakan1">
+
+      MATI
+
+    </div>
+
+    <button
+      id="btnPakan1"
+      class="btn-on">
+
+      TEKAN & TAHAN
+
+    </button>
+
+  </div>
+
+
+  <!-- =========================
+       PAKAN 2
+       ========================= -->
+
+  <div class="card">
+
+    <h2>PAKAN 2</h2>
+
+    <div
+      class="status"
+      id="statusPakan2">
+
+      MATI
+
+    </div>
+
+    <button
+      id="btnPakan2"
+      class="btn-on">
+
+      TEKAN & TAHAN
+
+    </button>
+
+  </div>
+
+
+  <!-- =========================
+       SEMUA PAKAN
+       ========================= -->
+
+  <div class="card">
+
+    <h2>SEMUA PAKAN</h2>
+
+    <div
+      class="status"
+      id="statusSemua">
+
+      SIAP
+
+    </div>
+
+    <button
+      id="btnSemua"
+      class="btn-all">
+
+      TEKAN & TAHAN
+
+    </button>
+
+  </div>
+
+
+  <!-- =========================
+       STATUS SISTEM
+       ========================= -->
+
+  <div class="system">
+
+    <h2>Status Sistem</h2>
+
+    <p>
+
+      Status:
+
+      <strong id="statusSistem">
+
+        SIAP
+
+      </strong>
+
+    </p>
+
+  </div>
+
+</div>
+
+
+<script>
+
+// =====================================================
+// HIVEMQ
+// =====================================================
+
+const MQTT_HOST =
+  "71434bcc9858426f942de1a4910a9d09.s1.eu.hivemq.cloud";
+
+const MQTT_USERNAME =
+  "pakan otomatis";
+
+const MQTT_PASSWORD =
+  "pakan12345";
+
+
+// =====================================================
+// TOPIC
+// =====================================================
+
+const TOPIC_COMMAND =
+  "smartfeeder/command";
+
+const TOPIC_STATUS =
+  "smartfeeder/status";
+
+
+// =====================================================
+// KONEKSI HIVEMQ
+// =====================================================
+
+const MQTT_URL =
+  "wss://" +
+  MQTT_HOST +
+  ":8884/mqtt";
+
+
+const client = mqtt.connect(
+  MQTT_URL,
+  {
+
+    username: MQTT_USERNAME,
+
+    password: MQTT_PASSWORD,
+
+    clientId:
+      "WEB-SmartFeeder-" +
+      Math.random()
+        .toString(16)
+        .substring(2),
+
+    clean: true,
+
+    reconnectPeriod: 3000
+
+  }
+);
+
+
+// =====================================================
+// CONNECT
+// =====================================================
+
+client.on(
+  "connect",
+  function() {
+
+    console.log(
+      "HiveMQ TERHUBUNG"
+    );
+
+    document
+      .getElementById(
+        "connectionStatus"
+      )
+      .innerText = "TERHUBUNG";
+
+    document
+      .getElementById(
+        "connectionStatus"
+      )
+      .className =
+        "status-online";
+
+
+    client.subscribe(
+      TOPIC_STATUS
+    );
+
+  }
+);
+
+
+// =====================================================
+// DISCONNECT
+// =====================================================
+
+client.on(
+  "close",
+  function() {
+
+    document
+      .getElementById(
+        "connectionStatus"
+      )
+      .innerText = "TERPUTUS";
+
+    document
+      .getElementById(
+        "connectionStatus"
+      )
+      .className =
+        "status-offline";
+
+  }
+);
+
+
+// =====================================================
+// ERROR
+// =====================================================
+
+client.on(
+  "error",
+  function(error) {
+
+    console.log(
+      "MQTT ERROR:",
+      error
+    );
+
+  }
+);
+
+
+// =====================================================
+// TERIMA STATUS ESP32
+// =====================================================
+
+client.on(
+  "message",
+  function(topic, message) {
+
+    if (
+      topic !== TOPIC_STATUS
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      const data =
+        JSON.parse(
+          message.toString()
+        );
+
+
+      // -------------------------
+      // PAKAN 1
+      // -------------------------
+
+      document
+        .getElementById(
+          "statusPakan1"
+        )
+        .innerText =
+          data.pakan1;
+
+
+      // -------------------------
+      // PAKAN 2
+      // -------------------------
+
+      document
+        .getElementById(
+          "statusPakan2"
+        )
+        .innerText =
+          data.pakan2;
+
+
+      // -------------------------
+      // STATUS SISTEM
+      // -------------------------
+
+      document
+        .getElementById(
+          "statusSistem"
+        )
+        .innerText =
+          data.status;
+
+
+      // -------------------------
+      // SEMUA PAKAN
+      // -------------------------
+
+      if (
+        data.pakan1 === "AKTIF" &&
+        data.pakan2 === "AKTIF"
+      ) {
+
+        document
+          .getElementById(
+            "statusSemua"
+          )
+          .innerText =
+            "AKTIF";
+
+      }
+
+      else {
+
+        document
+          .getElementById(
+            "statusSemua"
+          )
+          .innerText =
+            "SIAP";
+
+      }
+
+    }
+
+    catch(error) {
+
+      console.log(
+        "Data tidak valid:",
+        error
+      );
+
+    }
+
+  }
+);
+
+
+// =====================================================
+// KIRIM PERINTAH
+// =====================================================
+
+function kirimPerintah(
+  perintah
+) {
+
+  if (!client.connected) {
+
+    console.log(
+      "HiveMQ belum terhubung!"
+    );
+
+    return false;
+
+  }
+
+
+  client.publish(
+    TOPIC_COMMAND,
+    perintah
+  );
+
+
+  console.log(
+    "Perintah:",
+    perintah
+  );
+
+  return true;
+}
+
+
+// =====================================================
+// FUNGSI TEKAN & TAHAN
+// =====================================================
+
+function tombolTahan(
+  tombol,
+  perintahON,
+  perintahOFF
+) {
+
+  let sedangDitekan = false;
+
+
+  // ===================================================
+  // SAAT MOUSE / JARI MENEKAN
+  // ===================================================
+
+  tombol.addEventListener(
+    "pointerdown",
+    function(event) {
+
+      event.preventDefault();
+
+
+      // Hindari pengiriman ON berulang
+      if (sedangDitekan) {
+        return;
+      }
+
+
+      sedangDitekan = true;
+
+
+      tombol.classList.add(
+        "ditekan"
+      );
+
+
+      tombol.setPointerCapture(
+        event.pointerId
+      );
+
+
+      kirimPerintah(
+        perintahON
+      );
+
+    }
+  );
+
+
+  // ===================================================
+  // SAAT MOUSE / JARI DILEPAS
+  // ===================================================
+
+  tombol.addEventListener(
+    "pointerup",
+    function(event) {
+
+      event.preventDefault();
+
+
+      if (!sedangDitekan) {
+        return;
+      }
+
+
+      sedangDitekan = false;
+
+
+      tombol.classList.remove(
+        "ditekan"
+      );
+
+
+      kirimPerintah(
+        perintahOFF
+      );
+
+    }
+  );
+
+
+  // ===================================================
+  // JIKA POINTER KELUAR / DIBATALKAN
+  // ===================================================
+
+  tombol.addEventListener(
+    "pointercancel",
+    function(event) {
+
+      if (!sedangDitekan) {
+        return;
+      }
+
+
+      sedangDitekan = false;
+
+
+      tombol.classList.remove(
+        "ditekan"
+      );
+
+
+      kirimPerintah(
+        perintahOFF
+      );
+
+    }
+  );
+
+}
+
+
+// =====================================================
+// PASANG FUNGSI PADA TOMBOL PAKAN 1
+// =====================================================
+
+tombolTahan(
+
+  document.getElementById(
+    "btnPakan1"
+  ),
+
+  "S1 ON",
+
+  "S1 OFF"
+
+);
+
+
+// =====================================================
+// PASANG FUNGSI PADA TOMBOL PAKAN 2
+// =====================================================
+
+tombolTahan(
+
+  document.getElementById(
+    "btnPakan2"
+  ),
+
+  "S2 ON",
+
+  "S2 OFF"
+
+);
+
+
+// =====================================================
+// PASANG FUNGSI PADA TOMBOL SEMUA PAKAN
+// =====================================================
+
+tombolTahan(
+
+  document.getElementById(
+    "btnSemua"
+  ),
+
+  "ALL ON",
+
+  "ALL OFF"
+
+);
+
+</script>
+
+</body>
+
+</html>
