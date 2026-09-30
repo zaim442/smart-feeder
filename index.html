@@ -96,7 +96,7 @@
     }
 
     .btn-on {
-      background: #22c55e;
+      background: #00d44e;
       color: white;
     }
 
@@ -121,7 +121,7 @@
     }
 
     .system {
-      background: white;
+      background: rgb(255, 254, 254);
       padding: 20px;
       border-radius: 15px;
       text-align: center;
@@ -170,7 +170,7 @@
 
   <div class="card">
 
-    <h2>PAKAN 1</h2>
+    <h2>PAGI</h2>
 
     <div
       class="status"
@@ -197,7 +197,7 @@
 
   <div class="card">
 
-    <h2>PAKAN 2</h2>
+    <h2>SIANG</h2>
 
     <div
       class="status"
@@ -224,7 +224,7 @@
 
   <div class="card">
 
-    <h2>SEMUA PAKAN</h2>
+    <h2>SORE</h2>
 
     <div
       class="status"
@@ -311,9 +311,9 @@ const client = mqtt.connect(
   MQTT_URL,
   {
 
-    username: MQTT_USERNAME,
+    username: "pakan otomatis",
 
-    password: MQTT_PASSWORD,
+    password: "pakan12345",
 
     clientId:
       "WEB-SmartFeeder-" +
